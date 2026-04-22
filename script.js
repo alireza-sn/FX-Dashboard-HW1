@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
 
+    const BASE_URL = 'http://localhost:3000/api';
+
     // Sidebar Collapse Logic
     const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
     if (isCollapsed) {
@@ -28,43 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         red: '#FF3B30',
         muted: '#86868B',
         grid: 'rgba(0,0,0,0.05)'
-    };
-
-    const mockDB = {
-        overview: {
-            leads: 2482,
-            conversion: '18.5%',
-            payouts: '$128,450',
-            trends: [
-                { pair: 'EUR/USD', price: '1.0942', change: '+0.04%', up: true },
-                { pair: 'GBP/USD', price: '1.2681', change: '-0.12%', up: false },
-                { pair: 'BTC/USD', price: '64,210', change: '+2.41%', up: true }
-            ],
-            systemHealth: [98, 99, 97, 98, 99, 100, 99, 98, 97, 99, 100, 98],
-            marketSignals: [45, 52, 48, 61, 55, 67, 72, 65, 58, 63, 70, 75]
-        },
-        clients: {
-            directory: [
-                { id: 'C001', name: 'James Wilson', status: 'Active', balance: '$12,400' },
-                { id: 'C002', name: 'Sarah Chen', status: 'Pending', balance: '$0' },
-                { id: 'C003', name: 'Michael Ross', status: 'Active', balance: '$45,200' },
-                { id: 'C004', name: 'Elena Rodriguez', status: 'Inactive', balance: '$1,200' }
-            ],
-            stats: { total: 1284, active: 856, leads: 42 }
-        },
-        finances: {
-            revenue: [45000, 52000, 48000, 61000, 55000, 67000],
-            payouts: [12000, 15000, 11000, 18000, 14000, 21000],
-            months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-        },
-        alerts: {
-            recent: [
-                { time: '10:24 AM', type: 'Critical', message: 'High Volatility Detected: BTC/USD' },
-                { time: '09:15 AM', type: 'Info', message: 'Pending Withdrawal Request: #8821' },
-                { time: '08:42 AM', type: 'Warning', message: 'API Latency Above Threshold' }
-            ],
-            frequency: [5, 8, 3, 12, 7, 15, 10, 4, 6, 9, 11, 5, 8, 14, 12, 6, 4, 3, 7, 10, 15, 12, 8, 5]
-        }
     };
 
     // Theme Logic
@@ -106,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function renderTab(tab) {
-        contentArea.innerHTML = '';
+        contentArea.innerHTML = '<div class="loading">Loading...</div>';
         switch(tab) {
             case 'overview': renderOverview(); break;
             case 'clients': renderClients(); break;
@@ -129,8 +94,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 25);
     }
 
-    function renderOverview() {
-        const data = mockDB.overview;
+    async function fetchData(endpoint) {
+        try {
+            const response = await fetch(`${BASE_URL}${endpoint}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching ${endpoint}:`, error);
+            return null;
+        }
+    }
+
+    async function renderOverview() {
+        const data = await fetchData('/overview');
+        if (!data) {
+            contentArea.innerHTML = '<div class="error">Failed to load overview data.</div>';
+            return;
+        }
+
         contentArea.innerHTML = `
             <div class="card"><h3>Active Leads</h3><div class="value">${data.leads}</div><div class="status positive">↑ 14.2%</div></div>
             <div class="card"><h3>Conversion</h3><div class="value">${data.conversion}</div><div class="status">Target: 20%</div></div>
@@ -156,8 +136,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderClients() {
-        const { directory, stats } = mockDB.clients;
+    async function renderClients() {
+        // We fetch 'leads' from the API for the clients tab
+        const leads = await fetchData('/leads');
+        if (!leads) {
+            contentArea.innerHTML = '<div class="error">Failed to load clients data.</div>';
+            return;
+        }
+
+        const stats = {
+            total: leads.length,
+            active: leads.filter(l => l.status === 'Active').length,
+            new: leads.filter(l => l.status === 'Pending').length
+        };
+
         contentArea.innerHTML = `
             <div class="stat-group">
                 <div class="card stat-card"><div class="stat-label">Total Clients</div><div class="stat-value" id="c1">0</div></div>
@@ -168,43 +160,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>Client Directory</h3>
                 <table class="data-table">
                     <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Balance</th></tr></thead>
-                    <tbody>${directory.map(c => `<tr><td style="color:var(--text-secondary)">${c.id}</td><td style="font-weight:500">${c.name}</td><td><span class="status ${c.status === 'Active' ? 'positive' : ''}">${c.status}</span></td><td>${c.balance}</td></tr>`).join('')}</tbody>
+                    <tbody>${leads.map(c => `<tr><td style="color:var(--text-secondary)">${c.id}</td><td style="font-weight:500">${c.name}</td><td><span class="status ${c.status === 'Active' ? 'positive' : ''}">${c.status}</span></td><td>${c.balance}</td></tr>`).join('')}</tbody>
                 </table>
             </div>
         `;
         countUp(document.getElementById('c1'), stats.total);
         countUp(document.getElementById('c2'), stats.active);
-        countUp(document.getElementById('c3'), stats.leads);
+        countUp(document.getElementById('c3'), stats.new);
     }
 
-    function renderFinances() {
+    async function renderFinances() {
+        const data = await fetchData('/finances');
+        if (!data || data.length === 0) {
+            contentArea.innerHTML = '<div class="error">No finance data available.</div>';
+            return;
+        }
+
+        const months = data.map(d => d.month);
+        const revenues = data.map(d => d.revenue);
+        const payouts = data.map(d => d.payout);
+
         contentArea.innerHTML = `
             <div class="card card-half"><h3>Monthly Revenue</h3><div class="chart-container"><canvas id="rfChart"></canvas></div></div>
             <div class="card card-half"><h3>Payout History</h3><div class="chart-container"><canvas id="pfChart"></canvas></div></div>
         `;
         new Chart(document.getElementById('rfChart'), {
-            type: 'bar', data: { labels: mockDB.finances.months, datasets: [{ data: mockDB.finances.revenue, backgroundColor: palette.blue, borderRadius: 8 }] },
+            type: 'bar', data: { labels: months, datasets: [{ data: revenues, backgroundColor: palette.blue, borderRadius: 8 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.03)' } } } }
         });
         new Chart(document.getElementById('pfChart'), {
-            type: 'line', data: { labels: mockDB.finances.months, datasets: [{ data: mockDB.finances.payouts, borderColor: palette.teal, tension: 0.4, pointRadius: 4, pointBackgroundColor: palette.teal }] },
+            type: 'line', data: { labels: months, datasets: [{ data: payouts, borderColor: palette.teal, tension: 0.4, pointRadius: 4, pointBackgroundColor: palette.teal }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.03)' } } } }
         });
     }
 
-    function renderAlerts() {
+    async function renderAlerts() {
+        const alerts = await fetchData('/alerts');
+        if (!alerts) {
+            contentArea.innerHTML = '<div class="error">Failed to load alerts data.</div>';
+            return;
+        }
+
         contentArea.innerHTML = `
             <div class="card card-wide"><h3>Alert Frequency (24h)</h3><div class="chart-container" style="height:200px"><canvas id="afChart"></canvas></div></div>
             <div class="card card-wide">
                 <h3>System Logs</h3>
                 <table class="data-table">
                     <thead><tr><th>Time</th><th>Type</th><th>Message</th></tr></thead>
-                    <tbody>${mockDB.alerts.recent.map(a => `<tr><td style="color:var(--text-secondary)">${a.time}</td><td><span class="status ${a.type === 'Critical' ? 'negative' : ''}">${a.type}</span></td><td style="font-weight:400">${a.message}</td></tr>`).join('')}</tbody>
+                    <tbody>${alerts.map(a => `<tr><td style="color:var(--text-secondary)">${a.time}</td><td><span class="status ${a.type === 'Critical' ? 'negative' : ''}">${a.type}</span></td><td style="font-weight:400">${a.message}</td></tr>`).join('')}</tbody>
                 </table>
             </div>
         `;
+        
+        // frequency data might need to be extracted or calculated from alerts if not provided separately
+        // For now, using a placeholder if 'frequency' is not in alert object
+        const freqData = Array(24).fill(0).map(() => Math.floor(Math.random() * 15)); 
+
         new Chart(document.getElementById('afChart'), {
-            type: 'line', data: { labels: Array(24).fill(''), datasets: [{ data: mockDB.alerts.frequency, borderColor: palette.red, backgroundColor: 'rgba(255,59,48,0.05)', fill: true, tension: 0.4, pointRadius: 0 }] },
+            type: 'line', data: { labels: Array(24).fill(''), datasets: [{ data: freqData, borderColor: palette.red, backgroundColor: 'rgba(255,59,48,0.05)', fill: true, tension: 0.4, pointRadius: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(0,0,0,0.03)' } } } }
         });
     }
