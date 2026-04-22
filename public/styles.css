@@ -364,6 +364,44 @@ header {
 
 .stat-card { text-align: center; }
 
+/* Utility & Role-based UI */
+.loading, .error, .permission-denied {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-radius: 18px;
+    box-shadow: var(--shadow-large);
+}
+
+.error { color: var(--system-red); }
+
+/* Role badge styling */
+.role-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 8px;
+    background: var(--accent-blue);
+    color: white;
+}
+
+[data-role='Guest'] .role-badge { background: var(--text-secondary); }
+[data-role='Agent'] .role-badge { background: var(--system-green); }
+
+/* Hide elements for specific roles if needed via CSS as fallback */
+.admin-only, .agent-only {
+    display: none;
+}
+
+[data-user-role='Admin'] .admin-only { display: block; }
+[data-user-role='Admin'] .agent-only { display: block; }
+[data-user-role='Agent'] .agent-only { display: block; }
+
 /* Mobile Adaptations */
 @media (max-width: 768px) {
     .dashboard-layout { flex-direction: column; }
