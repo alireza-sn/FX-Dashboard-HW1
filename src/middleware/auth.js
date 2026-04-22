@@ -15,7 +15,13 @@ const authenticateToken = (req, res, next) => {
 
 const authorize = (roles = []) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
+        // Repair 3: Case-insensitive role comparison and robust check
+        const userRole = req.user && req.user.role;
+        const hasPermission = roles.some(role => 
+            role.toLowerCase() === (userRole || '').toLowerCase()
+        );
+
+        if (!hasPermission) {
             return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
         }
         next();

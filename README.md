@@ -1,7 +1,7 @@
-# Managed FX Terminal | Professional Analytics Portal
+# FXpal Dashboard | Professional Analytics Portal
 
 ## 🚀 Overview
-The **Managed FX Terminal** is a high-performance, professional-grade analytics portal designed for International Forex Brokerage operations. Re-engineered for the **Apple 2026 Edition**, this project utilizes a secure 3-tier architecture to provide a premium, intuitive user experience while maintaining rigorous security standards for financial data.
+The **FXpal Dashboard** is a high-performance, professional-grade analytics portal designed for International Forex Brokerage operations. Re-engineered for the **Apple 2026 Edition**, this project utilizes a secure 3-tier architecture to provide a premium, intuitive user experience while maintaining rigorous security standards for financial data.
 
 ---
 
@@ -65,4 +65,4 @@ npm start
 
 ---
 
-**Developed by Alireza | Copyright 2026 Opo**
+**Developed by Alireza | FXpal**

@@ -1,10 +1,43 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding data...');
+  console.log('Starting seeding...');
 
-  // Seed Leads
+  // 1. Admin User
+  const adminPassword = await bcrypt.hash('Password123', 10);
+  const adminEmail = 'a.saeidinejad@fx.dashboard'.toLowerCase();
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { role: 'Admin' }, // Ensure role is correct if user already exists
+    create: {
+      email: adminEmail,
+      password: adminPassword,
+      name: 'Admin User',
+      role: 'Admin',
+    },
+  });
+  console.log('Admin user successfully created/verified:', admin.email);
+
+  // 2. Guest User
+  const guestPassword = await bcrypt.hash('Guest123', 10);
+  const guestEmail = 'guest@fx.dashboard'.toLowerCase();
+  const guest = await prisma.user.upsert({
+    where: { email: guestEmail },
+    update: { role: 'Guest' },
+    create: {
+      email: guestEmail,
+      password: guestPassword,
+      name: 'Guest User',
+      role: 'Guest',
+    },
+  });
+  console.log('Guest user successfully created/verified:', guest.email);
+
+  console.log('Seeding other dashboard data...');
+
+  // Leads
   await prisma.lead.createMany({
     data: [
       { id: 1, name: 'James Wilson', status: 'Active', balance: '$12,400' },
@@ -15,7 +48,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Seed Finances
+  // Finances
   await prisma.finance.createMany({
     data: [
       { month: 'Jan', revenue: 45000, payout: 12000 },
@@ -28,7 +61,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Seed Alerts
+  // Alerts
   await prisma.alert.createMany({
     data: [
       { time: '10:24 AM', type: 'Critical', message: 'High Volatility Detected: BTC/USD' },
