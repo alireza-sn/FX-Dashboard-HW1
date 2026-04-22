@@ -4,7 +4,12 @@ const getLeads = async (req, res) => {
   try {
     const leads = await prisma.lead.findMany({ orderBy: { id: 'desc' } });
     res.json(leads);
-  } catch (error) { res.status(500).json({ error: error.message }); }
+  } catch (error) {
+    // Controller Fix: Detailed logging for terminal diagnostics
+    console.error('--- DATABASE ERROR (GET /api/leads) ---');
+    console.error(error);
+    res.status(500).json({ error: 'Database error, please check terminal.', details: error.message });
+  }
 };
 
 const createLead = async (req, res) => {
@@ -12,7 +17,11 @@ const createLead = async (req, res) => {
     const { name, status, balance } = req.body;
     const newLead = await prisma.lead.create({ data: { name, status, balance } });
     res.status(201).json(newLead);
-  } catch (error) { res.status(500).json({ error: error.message }); }
+  } catch (error) {
+    console.error('--- DATABASE ERROR (POST /api/leads) ---');
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 module.exports = { getLeads, createLead };

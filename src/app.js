@@ -11,6 +11,9 @@ const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
+// EMERGENCY: Open CORS
+app.use(cors({ origin: '*' }));
+
 // Security Middlewares
 app.use(
   helmet({
@@ -26,23 +29,20 @@ app.use(
     },
   })
 );
-app.use(cors());
 app.use(express.json());
 
 // Rate Limiting
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: { error: 'Too many requests, please try again later.' }
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests' }
 });
 app.use('/api/', apiLimiter);
 
-// Static frontend serving
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Routes
 app.use('/api/auth', authRoutes);
-app.use('/api', dashboardRoutes); // matches /api/overview, /api/finances, /api/alerts, /api/health
+app.use('/api', dashboardRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/users', userRoutes);
 

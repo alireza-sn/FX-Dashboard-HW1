@@ -3,70 +3,44 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Starting seeding...');
+  console.log('--- SEEDING SAMPLE LEADS ---');
 
-  // 1. Admin User
+  // Ensure Admin User Exists
   const adminPassword = await bcrypt.hash('Password123', 10);
-  const adminEmail = 'a.saeidinejad@fx.dashboard'.toLowerCase();
-  const admin = await prisma.user.upsert({
+  const adminEmail = 'A.saeidinejad@fx.dashboard'.toLowerCase();
+  
+  await prisma.user.upsert({
     where: { email: adminEmail },
-    update: { role: 'Admin' }, // Ensure role is correct if user already exists
+    update: { password: adminPassword, role: 'Admin' },
     create: {
       email: adminEmail,
       password: adminPassword,
-      name: 'Admin User',
+      name: 'Alireza',
       role: 'Admin',
     },
   });
-  console.log('Admin user successfully created/verified:', admin.email);
 
-  // 2. Guest User
-  const guestPassword = await bcrypt.hash('Guest123', 10);
-  const guestEmail = 'guest@fx.dashboard'.toLowerCase();
-  const guest = await prisma.user.upsert({
-    where: { email: guestEmail },
-    update: { role: 'Guest' },
-    create: {
-      email: guestEmail,
-      password: guestPassword,
-      name: 'Guest User',
-      role: 'Guest',
-    },
-  });
-  console.log('Guest user successfully created/verified:', guest.email);
+  // Seed 5 Sample Leads
+  const sampleLeads = [
+    { name: 'James Wilson', status: 'Active', balance: '$12,400' },
+    { name: 'Sarah Chen', status: 'Pending', balance: '$0' },
+    { name: 'Michael Ross', status: 'Active', balance: '$45,200' },
+    { name: 'Elena Rodriguez', status: 'Inactive', balance: '$1,200' },
+    { name: 'David Smith', status: 'Active', balance: '$8,900' }
+  ];
 
-  console.log('Seeding other dashboard data...');
+  for (const lead of sampleLeads) {
+    await prisma.lead.create({ data: lead });
+  }
 
-  // Leads
-  await prisma.lead.createMany({
-    data: [
-      { id: 1, name: 'James Wilson', status: 'Active', balance: '$12,400' },
-      { id: 2, name: 'Sarah Chen', status: 'Pending', balance: '$0' },
-      { id: 3, name: 'Michael Ross', status: 'Active', balance: '$45,200' },
-      { id: 4, name: 'Elena Rodriguez', status: 'Inactive', balance: '$1,200' },
-    ],
-    skipDuplicates: true,
-  });
+  console.log('Successfully seeded 5 sample leads.');
 
-  // Finances
+  // Seed Finances
   await prisma.finance.createMany({
     data: [
       { month: 'Jan', revenue: 45000, payout: 12000 },
       { month: 'Feb', revenue: 52000, payout: 15000 },
       { month: 'Mar', revenue: 48000, payout: 11000 },
-      { month: 'Apr', revenue: 61000, payout: 18000 },
-      { month: 'May', revenue: 55000, payout: 14000 },
-      { month: 'Jun', revenue: 67000, payout: 21000 },
-    ],
-    skipDuplicates: true,
-  });
-
-  // Alerts
-  await prisma.alert.createMany({
-    data: [
-      { time: '10:24 AM', type: 'Critical', message: 'High Volatility Detected: BTC/USD' },
-      { time: '09:15 AM', type: 'Info', message: 'Pending Withdrawal Request: #8821' },
-      { time: '08:42 AM', type: 'Warning', message: 'API Latency Above Threshold' },
     ],
     skipDuplicates: true,
   });

@@ -60,6 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const email = e.target.querySelector('input[type="email"]').value;
         const password = e.target.querySelector('input[type="password"]').value;
+        
+        // EMERGENCY DEBUG
+        console.log('Sending Login:', { email, password });
+
         const submitBtn = e.target.querySelector('button');
 
         submitBtn.innerText = 'Verifying...';
@@ -109,13 +113,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             loginOverlay.style.display = 'none';
             dashboard.style.display = 'flex';
-            if (user.name) document.querySelector('.user-name').innerText = user.name;
+            if (user.name) {
+                // Remove any override/bypass text from name
+                const cleanName = user.name.replace(/\s*\(.*?\)\s*/g, '').trim();
+                document.querySelector('.user-name').innerText = cleanName;
+            }
             if (user.role) {
                 const roleDisplay = document.getElementById('display-role');
-                roleDisplay.innerText = `FX ${user.role}`;
-                roleDisplay.className = 'user-role'; // Reset
-                if (user.role === 'Admin') roleDisplay.style.color = 'var(--accent-blue)';
-                if (user.role === 'Guest') roleDisplay.style.color = 'var(--text-secondary)';
+                roleDisplay.innerText = user.role;
+                roleDisplay.className = 'role-badge'; // Apply Apple-style badge class
+                roleDisplay.style.color = ''; // Reset inline color
             }
             setupNav();
             renderTab('overview');
@@ -143,8 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('fx_token');
         try {
             const response = await fetch(`${BASE_URL}${endpoint}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': 'Bearer ' + token }
             });
+            
             if (response.status === 401 || response.status === 403) {
                 if (response.status === 403 && endpoint !== '/users') {
                      alert("Permission denied");
@@ -153,8 +161,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return null;
             }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             return await response.json();
-        } catch (error) { return null; }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            contentArea.innerHTML = `<div class="error">Failed to load data: ${error.message}. Please try again.</div>`;
+            return null;
+        }
     }
 
     async function renderOverview() {
