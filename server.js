@@ -9,6 +9,7 @@ const port = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static('.')); // Serve static files (index.html, styles.css, script.js)
 
 // API Endpoints using Prisma
 
@@ -37,8 +38,20 @@ app.get('/api/overview', async (req, res) => {
 // Leads API
 app.get('/api/leads', async (req, res) => {
   try {
-    const leads = await prisma.lead.findMany();
+    const leads = await prisma.lead.findMany({ orderBy: { id: 'desc' } });
     res.json(leads);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/leads', async (req, res) => {
+  try {
+    const { name, status, balance } = req.body;
+    const newLead = await prisma.lead.create({
+      data: { name, status, balance }
+    });
+    res.status(201).json(newLead);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

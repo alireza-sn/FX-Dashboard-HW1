@@ -137,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function renderClients() {
-        // We fetch 'leads' from the API for the clients tab
         const leads = await fetchData('/leads');
         if (!leads) {
             contentArea.innerHTML = '<div class="error">Failed to load clients data.</div>';
@@ -156,17 +155,92 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card stat-card"><div class="stat-label">Active Today</div><div class="stat-value" id="c2">0</div></div>
                 <div class="card stat-card"><div class="stat-label">New Leads</div><div class="stat-value" id="c3">0</div></div>
             </div>
+            
             <div class="card card-wide">
-                <h3>Client Directory</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3>Client Directory</h3>
+                    <button id="show-lead-form" class="pill-button" style="padding: 8px 16px; font-size: 14px;">+ Add New Lead</button>
+                </div>
+
+                <div id="lead-form-container" class="glass" style="display:none; padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid var(--grid-color)">
+                    <form id="new-lead-form" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; align-items:end;">
+                        <div class="input-group" style="margin:0">
+                            <label style="font-size:12px; color:var(--text-secondary); margin-bottom:5px; display:block;">Full Name</label>
+                            <input type="text" id="lead-name" placeholder="Enter Name" required style="margin:0">
+                        </div>
+                        <div class="input-group" style="margin:0">
+                            <label style="font-size:12px; color:var(--text-secondary); margin-bottom:5px; display:block;">Status</label>
+                            <select id="lead-status" required style="width:100%; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.1); background:var(--glass-bg);">
+                                <option value="Active">Active</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="margin:0">
+                            <label style="font-size:12px; color:var(--text-secondary); margin-bottom:5px; display:block;">Initial Balance</label>
+                            <input type="text" id="lead-balance" placeholder="$0.00" required style="margin:0">
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button type="submit" class="pill-button" style="padding: 12px; flex:1">Save Lead</button>
+                            <button type="button" id="cancel-lead-form" class="pill-button" style="padding: 12px; flex:1; background:var(--muted); color:white;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
                 <table class="data-table">
                     <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Balance</th></tr></thead>
-                    <tbody>${leads.map(c => `<tr><td style="color:var(--text-secondary)">${c.id}</td><td style="font-weight:500">${c.name}</td><td><span class="status ${c.status === 'Active' ? 'positive' : ''}">${c.status}</span></td><td>${c.balance}</td></tr>`).join('')}</tbody>
+                    <tbody>${leads.map(c => `<tr><td style="color:var(--text-secondary)">#${c.id}</td><td style="font-weight:500">${c.name}</td><td><span class="status ${c.status === 'Active' ? 'positive' : ''}">${c.status}</span></td><td>${c.balance}</td></tr>`).join('')}</tbody>
                 </table>
             </div>
         `;
+        
         countUp(document.getElementById('c1'), stats.total);
         countUp(document.getElementById('c2'), stats.active);
         countUp(document.getElementById('c3'), stats.new);
+
+        // Form Toggling Logic
+        const formContainer = document.getElementById('lead-form-container');
+        document.getElementById('show-lead-form').addEventListener('click', () => {
+            formContainer.style.display = 'block';
+        });
+        document.getElementById('cancel-lead-form').addEventListener('click', () => {
+            formContainer.style.display = 'none';
+        });
+
+        // Form Submission Logic
+        document.getElementById('new-lead-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.innerText = 'Saving...';
+            submitBtn.disabled = true;
+
+            const leadData = {
+                name: document.getElementById('lead-name').value,
+                status: document.getElementById('lead-status').value,
+                balance: document.getElementById('lead-balance').value
+            };
+
+            try {
+                const response = await fetch(`${BASE_URL}/leads`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(leadData)
+                });
+
+                if (response.ok) {
+                    renderClients(); // Refresh the list
+                } else {
+                    alert('Failed to save lead');
+                    submitBtn.innerText = 'Save Lead';
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error saving lead:', error);
+                alert('Connection error');
+                submitBtn.innerText = 'Save Lead';
+                submitBtn.disabled = false;
+            }
+        });
     }
 
     async function renderFinances() {
